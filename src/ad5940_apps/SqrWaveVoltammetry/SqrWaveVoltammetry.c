@@ -151,7 +151,7 @@ Analog Devices Software License Agreement.
 * @{
 * **/
 
-#include "ad5940.h"
+#include "../../ad5940lib/ad5940.h"
 #include <stdio.h>
 #include "string.h"
 #include "math.h"
