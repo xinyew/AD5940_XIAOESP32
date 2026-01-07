@@ -33,7 +33,7 @@
 #define AD5940LIB_VER_PATCH       1    /**< Path number */
 #define AD5940LIB_VER   (AD5940LIB_VER_MAJOR<<16)|(AD5940LIB_VER_MINOR<<8)|(AD5940LIB_VER_PATCH)
 
-//#define ADI_DEBUG   /**< Comment this line to remove debug info. */
+#define ADI_DEBUG   /**< Comment this line to remove debug info. */
 
 #ifdef ADI_DEBUG
 #define ADI_Print printf /**< Select the method to print out debug message */

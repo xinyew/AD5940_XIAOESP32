@@ -23,10 +23,6 @@ void AD5940_WriteReg(uint16_t RegAddr, uint32_t RegData);
 uint32_t AD5940_GetMCUIntFlag(void);
 uint32_t AD5940_ClrMCUIntFlag(void);
 
-void AD5940_Print(const char *fmt, ...);
-void AD5940_PrintFloat(float val);
-void AD5940_PrintInt(uint32_t val);
-
 #ifdef __cplusplus
 }
 #endif

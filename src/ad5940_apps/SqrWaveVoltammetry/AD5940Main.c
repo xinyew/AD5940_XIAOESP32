@@ -33,11 +33,16 @@ float LFOSCFreq;    /* Measured LFOSC frequency */
 */
 static int32_t RampShowResult(float *pData, uint32_t DataCount)
 {
+  if (!DataCount) {
+    printf("Show result but not data\n");
+  } else {
+    printf("%d data received\n", DataCount);
+  }
   static uint32_t index;
   /* Print data*/
   for(int i=0;i<DataCount;i++)
   {
-    printf("index:%d, %.3f\n", index++, pData[i]);
+    printf("index:%d, %.8f\n", index++, pData[i]);
     //printf("%.3f\n",pData[i]);
     //index++;
     //i += 10;  /* Print though UART consumes too much time. */
@@ -124,7 +129,7 @@ void AD5940RampStructInit(void)
   pRampCfg->MaxSeqLen = 512-0x10;              /* 4kB/4 = 1024  */
   pRampCfg->RcalVal = 10000.0;                  /* 10kOhm RCAL */
   pRampCfg->ADCRefVolt = 1.820f;               /* The real ADC reference voltage. Measure it from capacitor C12 with DMM. */
-  pRampCfg->FifoThresh = 1023;                   /* Maximum value is 2kB/4-1 = 512-1. Set it to higher value to save power. */
+  pRampCfg->FifoThresh = 50;                   /* Maximum value is 2kB/4-1 = 512-1. Set it to higher value to save power. */
   pRampCfg->SysClkFreq = 16000000.0f;           /* System clock is 16MHz by default */
   pRampCfg->LFOSCClkFreq = LFOSCFreq;           /* LFOSC frequency */
 	pRampCfg->AdcPgaGain = ADCPGA_1P5;
@@ -135,12 +140,12 @@ void AD5940RampStructInit(void)
   pRampCfg->RampPeakVolt = 0.0f;     		 /* Measurement finishes at -0.4V */
   pRampCfg->VzeroStart = 1300.0f;           /* Vzero is voltage on SE0 pin: 1.3V */
   pRampCfg->VzeroPeak = 1300.0f;          /* Vzero is voltage on SE0 pin: 1.3V */
-  pRampCfg->Frequency = 750;                 /* Frequency of square wave in Hz */
-  pRampCfg->SqrWvAmplitude = 150;       /* Amplitude of square wave in mV */
-  pRampCfg->SqrWvRampIncrement = 5; /* Increment in mV*/
+  pRampCfg->Frequency = 60;                 /* Frequency of square wave in Hz */
+  pRampCfg->SqrWvAmplitude = 40;       /* Amplitude of square wave in mV */
+  pRampCfg->SqrWvRampIncrement = 4; /* Increment in mV*/
   pRampCfg->SampleDelay = 0.2f;             /* Time between update DAC and ADC sample. Unit is ms and must be < (1/Frequency)/2 - 0.2*/
   pRampCfg->LPTIARtiaSel = LPTIARTIA_1K;      /* Maximum current decides RTIA value */
-	pRampCfg->bRampOneDir = bFALSE;//bTRUE;			/* Only measure ramp in one direction */
+	pRampCfg->bRampOneDir = bTRUE;//bTRUE;			/* Only measure ramp in one direction */
 }
 
 void AD5940_Main(void)

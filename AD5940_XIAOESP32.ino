@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <SPI.h>
+#include "./src/ad5940lib/ad5940.h"
 
 // Include the C library headers.
 // Note: Since we moved them to src/, we can include them relative to src or
@@ -14,15 +15,12 @@ void AD5940_Main(void);
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial)
-    ;
-  Serial.println("Starting UNO_AD5940ELCZ Refactored...");
+  Serial.println("Starting ESP32 AD5940...");
   Serial.flush();
-  // AD5940_Main() from AD5940Main.c handles initialization and the main loop.
-  // It contains a while(1) loop, so this call will not return.
+
+  AD5940_MCUResourceInit(NULL);
   AD5940_Main();
 }
 
 void loop() {
-  // Should never be reached because AD5940_Main has a while(1) loop.
 }
