@@ -156,6 +156,7 @@ Analog Devices Software License Agreement.
 #include "string.h"
 #include "math.h"
 #include "SqrWaveVoltammetry.h"
+#include "../AD5940Main.h"
 
 /**
 * @brief The ramp application paramters.
@@ -186,7 +187,10 @@ static AppSWVCfg_Type AppSWVCfg =
   .LPTIARtiaSel = LPTIARTIA_20K,      /* Maximum current decides RTIA value */
   .ExternalRtiaValue = 20000.0f,      /* Optional external RTIA resistore value in Ohm. */
   .AdcPgaGain = ADCPGA_1,     
+  // ---------- SINC2 OSR MODIFIED ------------
   .ADCSinc3Osr = ADCSINC3OSR_4,
+  // .ADCSinc2Osr = ADCSINC2OSR_1333,
+
   .FifoThresh = 4,
   /* Priviate parameters */
   .SWVInited = bFALSE,
@@ -199,6 +203,8 @@ static AppSWVCfg_Type AppSWVCfg =
   .SqrWvAmplitude = 25,         /* Square wave amplitude in mV */
   .SqrWvRampIncrement = 5,      /* Ramp increment in mV*/
 };
+
+static float CurrBaselineCode = 0;
 
 /**
 * @todo add paramater check. 
@@ -360,8 +366,12 @@ static AD5940Err AppSWVSeqInitGen(void)
   dsp_cfg.ADCFilterCfg.ADCRate = ADCRATE_800KHZ;  /* ADC runs at 16MHz clock in this example, sample rate is 800kHz */
   dsp_cfg.ADCFilterCfg.BpSinc3 = bFALSE;        /* We use data from SINC3 filter */
   dsp_cfg.ADCFilterCfg.Sinc2NotchEnable = bTRUE;
+  // ---------- Bypass notch because of the 37ms huge delay ------------
+  // dsp_cfg.ADCFilterCfg.BpNotch = bTRUE;
+  // dsp_cfg.ADCFilterCfg.ADCSinc2Osr = ADCSINC2OSR_1067;  /* Don't care */
   dsp_cfg.ADCFilterCfg.BpNotch = bTRUE;
-  dsp_cfg.ADCFilterCfg.ADCSinc2Osr = ADCSINC2OSR_1067;  /* Don't care */
+  // dsp_cfg.ADCFilterCfg.ADCSinc2Osr = AppSWVCfg.ADCSinc2Osr;
+
   dsp_cfg.ADCFilterCfg.ADCAvgNum = ADCAVGNUM_2;   /* Don't care because it's disabled */
   AD5940_DSPCfgS(&dsp_cfg);
   
@@ -403,20 +413,29 @@ static AD5940Err AppSWVSeqADCCtrlGen(void)
   ClksCalInfo_Type clks_cal;
   
   clks_cal.DataCount = 1; /* Sample one point everytime */
+  // ---------- Datatype is not notch or SINC3 anymore ------------
   clks_cal.DataType = DATATYPE_SINC3;
+  // clks_cal.DataType = DATATYPE_SINC2;
   clks_cal.ADCSinc3Osr = AppSWVCfg.ADCSinc3Osr;
-  clks_cal.ADCSinc2Osr = ADCSINC2OSR_1067;  /* Don't care */
+  // clks_cal.ADCSinc2Osr = AppSWVCfg.ADCSinc2Osr;
+
   clks_cal.ADCAvgNum = ADCAVGNUM_2; /* Don't care */
   clks_cal.RatioSys2AdcClk = AppSWVCfg.SysClkFreq/AppSWVCfg.AdcClkFreq;
   AD5940_ClksCalculate(&clks_cal, &WaitClks);
   
   AD5940_SEQGenCtrl(bTRUE);
   AD5940_SEQGpioCtrlS(AGPIO_Pin2);
+  // ---------- Power up SINC2NOTCH block ------------
   AD5940_AFECtrlS(AFECTRL_ADCPWR, bTRUE);
+  // AD5940_AFECtrlS(AFECTRL_ADCPWR|AFECTRL_SINC2NOTCH, bTRUE);
+
   AD5940_SEQGenInsert(SEQ_WAIT(16*100));  /* wait 250us for reference power up */
   AD5940_AFECtrlS(AFECTRL_ADCCNV, bTRUE);  /* Start ADC convert and DFT */
   AD5940_SEQGenInsert(SEQ_WAIT(WaitClks));  /* wait for first data ready */
+  // ---------- Stop SINC2NOTCH block ------------
   AD5940_AFECtrlS(AFECTRL_ADCPWR|AFECTRL_ADCCNV, bFALSE);  /* Stop ADC */
+  // AD5940_AFECtrlS(AFECTRL_ADCPWR|AFECTRL_ADCCNV|AFECTRL_SINC2NOTCH, bFALSE);  /* Stop ADC */
+
   AD5940_SEQGpioCtrlS(0);
   AD5940_EnterSleepS();/* Goto hibernate */
   /* Sequence end. */
@@ -458,90 +477,61 @@ static AD5940Err AppSWVSeqADCCtrlGen(void)
 static AD5940Err RampDacRegUpdate(uint32_t *pDACData)
 {
   uint32_t VbiasCode, VzeroCode;
-  
-  if (AppSWVCfg.bRampOneDir)
-  { 
-	if(AppSWVCfg.RampStartVolt > AppSWVCfg.RampPeakVolt)
-		AppSWVCfg.bDACCodeInc = bFALSE;
-    switch(AppSWVCfg.RampState)
-    {
-    case SWV_STATE0: /* Begin of Ramp  */
-      AppSWVCfg.CurrVzeroCode = (uint32_t)((AppSWVCfg.VzeroStart - 200.0f)/DAC6BITVOLT_1LSB);
-      AppSWVCfg.RampState = SWV_STATE1;
-      break;
-    case SWV_STATE1:
-      if(AppSWVCfg.CurrStepPos >= AppSWVCfg.StepNumber/2)
-      {
-        AppSWVCfg.RampState = SWV_STATE2;   /* Enter State2 */
-        AppSWVCfg.CurrVzeroCode = (uint32_t)((AppSWVCfg.VzeroPeak - 200.0f)/DAC6BITVOLT_1LSB);
-      }
-      break;
-    case SWV_STATE2:
-      if(AppSWVCfg.CurrStepPos >= AppSWVCfg.StepNumber)
-        AppSWVCfg.RampState = SWV_STOP;     /* Enter Stop */
-      break;
-    case SWV_STOP:
-      break;
-    }
+
+  // New Simplified Algorithm
+  // Scan Direction is handled by bDACCodeInc
+  // bDACCodeInc = TRUE  => UP SCAN   (Start < Peak)
+  // bDACCodeInc = FALSE => DOWN SCAN (Start > Peak)
+
+  // 1. Update Baseline (Start of new cycle, every even step except 0)
+  if (AppSWVCfg.CurrStepPos > 0 && (AppSWVCfg.CurrStepPos % 2 == 0))
+  {
+      if (AppSWVCfg.bDACCodeInc)
+          CurrBaselineCode -= AppSWVCfg.DACCodePerRamp; // Subtracting Vbias code increases Vcell (UP)
+      else
+          CurrBaselineCode += AppSWVCfg.DACCodePerRamp; // Adding Vbias code decreases Vcell (DOWN)
   }
+
+  // 2. Calculate Pulse (High/Low relative to Baseline)
+  // Vcell = Vzero - Vbias.
+  // To get High Vcell, we need Low Vbias (Baseline - Amplitude)
+  // To get Low Vcell, we need High Vbias (Baseline + Amplitude)
   
+  if (AppSWVCfg.bDACCodeInc) 
+  {
+      // UP SCAN
+      if (AppSWVCfg.CurrStepPos % 2 == 0)
+      {
+          // Even Step: Pulse HIGH (Low Vbias)
+          AppSWVCfg.CurrRampCode = CurrBaselineCode - AppSWVCfg.DACCodePerStep;
+      }
+      else
+      {
+          // Odd Step: Pulse LOW (High Vbias)
+          AppSWVCfg.CurrRampCode = CurrBaselineCode + AppSWVCfg.DACCodePerStep;
+      }
+  }
   else
   {
-    switch(AppSWVCfg.RampState)
-    {
-    case SWV_STATE0: /* Begin of Ramp  */
-      AppSWVCfg.CurrVzeroCode = (uint32_t)((AppSWVCfg.VzeroStart - 200.0f)/DAC6BITVOLT_1LSB);
-      AppSWVCfg.RampState = SWV_STATE1;
-      break;
-      
-    case SWV_STATE1:
-      if(AppSWVCfg.CurrStepPos >= AppSWVCfg.StepNumber/4)
+      // DOWN SCAN
+      if (AppSWVCfg.CurrStepPos % 2 == 0)
       {
-        AppSWVCfg.RampState = SWV_STATE2;   /* Enter State2 */
-        AppSWVCfg.CurrVzeroCode = (uint32_t)((AppSWVCfg.VzeroPeak - 200.0f)/DAC6BITVOLT_1LSB);
+           // Even Step: Pulse HIGH (Low Vbias) - FORCED
+           AppSWVCfg.CurrRampCode = CurrBaselineCode - AppSWVCfg.DACCodePerStep;
       }
-      break;
-      
-    case SWV_STATE2:
-      if(AppSWVCfg.CurrStepPos >= (AppSWVCfg.StepNumber*2)/4)
+      else
       {
-        AppSWVCfg.RampState = SWV_STATE3;   /* Enter State2 */
-        AppSWVCfg.bDACCodeInc = AppSWVCfg.bDACCodeInc ? bFALSE : bTRUE;
+           // Odd Step: Pulse LOW (High Vbias) - FORCED
+           AppSWVCfg.CurrRampCode = CurrBaselineCode + AppSWVCfg.DACCodePerStep;
       }
-      break;
-    case SWV_STATE3:
-      if(AppSWVCfg.CurrStepPos >= (AppSWVCfg.StepNumber*3)/4)
-      {
-        AppSWVCfg.RampState = SWV_STATE4;   /* Enter State2 */
-        AppSWVCfg.CurrVzeroCode = (uint32_t)((AppSWVCfg.VzeroPeak - 200.0f)/DAC6BITVOLT_1LSB);
-      }
-      break;    
-    case SWV_STATE4:
-      if(AppSWVCfg.CurrStepPos >= (AppSWVCfg.StepNumber))
-        AppSWVCfg.RampState = SWV_STOP;     /* Enter Stop */
-      break;
-    case SWV_STOP:
-      break;
-    }
-    
   }
-  AppSWVCfg.CurrStepPos++;  
-  if(AppSWVCfg.bSqrWaveHiLevel)
-  {
-    if(AppSWVCfg.bDACCodeInc)
-      AppSWVCfg.CurrRampCode -= (AppSWVCfg.DACCodePerStep - AppSWVCfg.DACCodePerRamp);
-    else
-      AppSWVCfg.CurrRampCode -= AppSWVCfg.DACCodePerStep;
-    AppSWVCfg.bSqrWaveHiLevel = bFALSE;
-  }else
-  {
-    
-    if(AppSWVCfg.bDACCodeInc)
-      AppSWVCfg.CurrRampCode += AppSWVCfg.DACCodePerStep;
-    else
-      AppSWVCfg.CurrRampCode += (AppSWVCfg.DACCodePerStep - AppSWVCfg.DACCodePerRamp);
-    AppSWVCfg.bSqrWaveHiLevel = bTRUE;
-  }
+
+  // 3. State Management (for stopping)
+  AppSWVCfg.CurrStepPos++;
+  if (AppSWVCfg.CurrStepPos >= AppSWVCfg.StepNumber)
+      AppSWVCfg.RampState = SWV_STOP;
+
+  // 4. DAC Formatting
   VzeroCode = AppSWVCfg.CurrVzeroCode;
   VbiasCode = (uint32_t)(VzeroCode*64 + AppSWVCfg.CurrRampCode);
   
@@ -550,6 +540,18 @@ static AD5940Err RampDacRegUpdate(uint32_t *pDACData)
   /* Truncate */
   if(VbiasCode > 4095) VbiasCode = 4095;
   if(VzeroCode >   63) VzeroCode =   63;
+
+  //////////////////////////////// BEGIN
+/* Calculate the decoded voltage (V_WE - V_RE) in mV based on datasheet */
+  float Vbias_abs_V = 0.2f + (float)VbiasCode * DAC12BITVOLT_1LSB / 1000.0f; // Absolute Voltage from 12-bit DAC (V)
+  float Vzero_abs_V = 0.2f + (float)VzeroCode * DAC6BITVOLT_1LSB / 1000.0f;  // Absolute Voltage from 6-bit DAC (V)
+  float final_cell_voltage_mv = (Vzero_abs_V - Vbias_abs_V) * 1000.0f; // (V_WE - V_RE) in mV
+  printf("Voltage Step: %f mV\n", final_cell_voltage_mv);
+  if (SWV_VoltageStepCount < SWV_VOLTAGE_STEP_BUFFER_SIZE) {
+      SWV_VoltageStepBuffer[SWV_VoltageStepCount++] = final_cell_voltage_mv;
+  }
+  //////////////////////////////// END
+
   *pDACData = (VzeroCode<<12)|VbiasCode;
   return AD5940ERR_OK;
 }
@@ -583,22 +585,28 @@ static AD5940Err AppSWVSeqDACCtrlGen(void)
   static uint32_t DACSeqBlk0Addr, DACSeqBlk1Addr;
   static uint32_t StepsRemainning, StepsPerBlock, DACSeqCurrBlk;
   
-  AppSWVCfg.StepNumber = (uint32_t)(2*(AppSWVCfg.RampPeakVolt - AppSWVCfg.RampStartVolt)/AppSWVCfg.SqrWvRampIncrement);
-  if(AppSWVCfg.bRampOneDir == bFALSE)
-  {
-    AppSWVCfg.StepNumber*=2;
-		AppSWVCfg.StepNumber-=2;
-  }
-  //AppSWVCfg.FifoThresh = AppSWVCfg.StepNumber;
+  // Calculate total steps (2 steps per increment)
+  float total_range = AppSWVCfg.RampPeakVolt - AppSWVCfg.RampStartVolt;
+  if(total_range < 0) total_range = -total_range;
+  float inc_abs = AppSWVCfg.SqrWvRampIncrement;
+  if(inc_abs < 0) inc_abs = -inc_abs;
   
-  if(AppSWVCfg.StepNumber >1020)
+  if (inc_abs < 0.001f) inc_abs = 0.001f; // Prevent division by zero
+
+  AppSWVCfg.StepNumber = (uint32_t)(2 * total_range / inc_abs);
+  
+  if(AppSWVCfg.StepNumber > 4096)
   {
-    printf("Error: Selected Increment, StartVolt and PeakVolt exceed accepted limits \n");
+    thor_printf("Error: Selected Increment, StartVolt and PeakVolt exceed accepted limits \n");
     while(1){}
   }
   /* Do some math calculations */
   if(AppSWVCfg.bFirstDACSeq == bTRUE)
   {
+    //////////////////////////////// BEGIN
+    printf("Voltage Steps:\n");
+    // thor_printf("Voltage Steps:\n"); // Removed, handled in TransmitSWVData
+    //////////////////////////////// END
     /* Reset bIsFirstRun at end of function. */
     int32_t DACSeqLenMax;
     StepsRemainning = AppSWVCfg.StepNumber;
@@ -612,19 +620,44 @@ static AD5940Err AppSWVSeqDACCtrlGen(void)
     DACSeqCurrBlk = CURRBLK_BLK0;    
     
     /* Analog part */
-    AppSWVCfg.DACCodePerStep = AppSWVCfg.SqrWvAmplitude/DAC12BITVOLT_1LSB;
-    AppSWVCfg.DACCodePerRamp = AppSWVCfg.SqrWvRampIncrement/DAC12BITVOLT_1LSB;
+    // Use ABSOLUTE values for Codes
+    AppSWVCfg.DACCodePerStep = fabsf(AppSWVCfg.SqrWvAmplitude)/DAC12BITVOLT_1LSB;
+    AppSWVCfg.DACCodePerRamp = fabsf(AppSWVCfg.SqrWvRampIncrement)/DAC12BITVOLT_1LSB;
     
 #if ALIGIN_VOLT2LSB
     AppSWVCfg.DACCodePerStep = (int32_t)AppSWVCfg.DACCodePerStep;
     AppSWVCfg.DACCodePerRamp = (int32_t)AppSWVCfg.DACCodePerRamp;
 #endif
-    if(AppSWVCfg.DACCodePerStep > 0)
-      AppSWVCfg.bDACCodeInc = bTRUE;
+
+    // Determine Direction
+    // bDACCodeInc = TRUE  => UP SCAN (Start < Peak)
+    // bDACCodeInc = FALSE => DOWN SCAN (Start > Peak)
+    if (AppSWVCfg.RampStartVolt < AppSWVCfg.RampPeakVolt)
+       AppSWVCfg.bDACCodeInc = bTRUE; // UP SCAN
     else
-      AppSWVCfg.bDACCodeInc = bFALSE;
-    AppSWVCfg.CurrRampCode = AppSWVCfg.RampStartVolt/DAC12BITVOLT_1LSB;
-    AppSWVCfg.RampState = SWV_STATE0;   /* Init state to STATE0 */
+       AppSWVCfg.bDACCodeInc = bFALSE; // DOWN SCAN
+
+    // Set Initial Baseline Code
+    // VbiasCode is calculated as Vzero + RampCode.
+    // RampCode represents the Vbias offset from Vzero.
+    // Vcell = Vzero - Vbias = -RampCode * LSB.
+    // So RampCode = -Vcell / LSB.
+    CurrBaselineCode = -AppSWVCfg.RampStartVolt/DAC12BITVOLT_1LSB;
+    
+    // Set Initial Code (Step 0) - Matches RampDacRegUpdate Logic
+    if (AppSWVCfg.bDACCodeInc) 
+    {
+        // UP SCAN, Step 0 (Even) -> Pulse HIGH -> Baseline - Amp
+        AppSWVCfg.CurrRampCode = CurrBaselineCode - AppSWVCfg.DACCodePerStep;
+    }
+    else
+    {
+        // DOWN SCAN, Step 0 (Even) -> Pulse LOW -> Baseline + Amp
+        AppSWVCfg.CurrRampCode = CurrBaselineCode + AppSWVCfg.DACCodePerStep;
+    }
+
+    AppSWVCfg.CurrVzeroCode = (uint32_t)((AppSWVCfg.VzeroStart - 200.0f)/DAC6BITVOLT_1LSB);
+    AppSWVCfg.RampState = SWV_STATE1; 
     AppSWVCfg.CurrStepPos = 0;
     
     bCmdForSeq0 = bTRUE;      /* Start with SEQ0 */
@@ -799,7 +832,10 @@ AD5940Err AppSWVInit(uint32_t *pBuffer, uint32_t BufferSize)
   /* Reconfigure FIFO, The Rtia calibration function may generate data that stored to FIFO */
   AD5940_FIFOCtrlS(FIFOSRC_SINC3, bFALSE);        /* Disable FIFO firstly */
   fifo_cfg.FIFOEn = bTRUE;
+  // ---------- Power up SINC2NOTCH block ------------
   fifo_cfg.FIFOSrc = FIFOSRC_SINC3;
+  // fifo_cfg.FIFOSrc = FIFOSRC_SINC2NOTCH;
+
   fifo_cfg.FIFOThresh = AppSWVCfg.FifoThresh;    /* Change FIFO paramters */
   fifo_cfg.FIFOMode = FIFOMODE_FIFO;
   fifo_cfg.FIFOSize = FIFOSIZE_4KB;
