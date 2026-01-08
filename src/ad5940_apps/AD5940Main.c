@@ -16,7 +16,7 @@ Analog Devices Software License Agreement.
 *****************************************************************************/
 #include "./SqrWaveVoltammetry/SqrWaveVoltammetry.h"
 #include "AD5940Main.h"
-#include "BLEPort.h" // Added for ESP32 Port
+#include "../port/BLEPort.h" // Added for ESP32 Port
 #include "../utilities/utilities.h"
 #include <string.h>
 

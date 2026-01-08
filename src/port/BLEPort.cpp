@@ -1,5 +1,5 @@
 #include "BLEPort.h"
-#include "AD5940Main.h" // For AD5940_SWV_Main prototype if needed
+#include "../ad5940_apps/AD5940Main.h" // For AD5940_SWV_Main prototype if needed
 #include "esp_mac.h"    // Added for esp_efuse_mac_get_default
 #include <Arduino.h>
 #include <BLE2902.h>
@@ -12,7 +12,7 @@
 #define LOG_CHAR_UUID "513eb430-89eb-4d7f-880d-7ee23aa0b593"
 #define MEAS_CHAR_UUID "dfe54d26-a9d5-4398-acf5-2585b41dd956"
 
-char device_name[32] = "THOR-ESP32";
+char device_name[32] = "THOR-EVAL";
 
 BLEServer *pServer = NULL;
 BLECharacteristic *pLogCharacteristic = NULL;
@@ -56,10 +56,10 @@ void BLEPort_Init(void) {
   // Create Device Name with MAC suffix to match "THOR-xxxx" style
   uint8_t mac[6];
   esp_efuse_mac_get_default(mac);
-  snprintf(device_name, sizeof(device_name), "THOR-%02x%02x", mac[4], mac[5]);
+  // snprintf(device_name, sizeof(device_name), "THOR-%02x%02x", mac[4], mac[5]);
 
   BLEDevice::init(device_name);
-
+  
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
