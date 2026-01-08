@@ -16,7 +16,9 @@ Analog Devices Software License Agreement.
 *****************************************************************************/
 #include "./SqrWaveVoltammetry/SqrWaveVoltammetry.h"
 #include "AD5940Main.h"
+#include "BLEPort.h" // Added for ESP32 Port
 #include "../utilities/utilities.h"
+#include <string.h>
 
 /**
    User could configure following parameters
@@ -36,77 +38,76 @@ uint32_t SWV_VoltageStepCount = 0;
 uint32_t AppBuff[APPBUFF_SIZE];
 float LFOSCFreq;    /* Measured LFOSC frequency */
 
-// TODO: Implement this function
 static void TransmitSWVData(uint32_t resultCount)
 {
-    // AppSWVCfg_Type *pSWVCfg;
-    // AppSWVGetCfg(&pSWVCfg);
+    AppSWVCfg_Type *pSWVCfg;
+    AppSWVGetCfg(&pSWVCfg);
 
-    // char chunk_buffer[256]; 
-    // uint32_t chunk_len = 0;
-    // chunk_buffer[0] = '\0';
+    char chunk_buffer[256]; 
+    uint32_t chunk_len = 0;
+    chunk_buffer[0] = '\0';
 
-    // // Helper macro to append lines
-    // #define APPEND_LINE(...) do { \
-    //     char line[128]; \
-    //     int len = snprintf(line, sizeof(line), __VA_ARGS__); \
-    //     if (chunk_len + len >= 240) { \
-    //         ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len); \
-    //         chunk_len = 0; \
-    //         chunk_buffer[0] = '\0'; \
-    //     } \
-    //     strcat(chunk_buffer, line); \
-    //     chunk_len += len; \
-    // } while(0)
+    // Helper macro to append lines
+    #define APPEND_LINE(...) do { \
+        char line[128]; \
+        int len = snprintf(line, sizeof(line), __VA_ARGS__); \
+        if (chunk_len + len >= 240) { \
+            ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len); \
+            chunk_len = 0; \
+            chunk_buffer[0] = '\0'; \
+        } \
+        strcat(chunk_buffer, line); \
+        chunk_len += len; \
+    } while(0)
 
-    // // 1. Transmit Header
-    // APPEND_LINE("Device Name: %s\n", device_name);
-    // APPEND_LINE("Param_RampStartVolt: %f\n", pSWVCfg->RampStartVolt);
-    // APPEND_LINE("Param_RampPeakVolt: %f\n", pSWVCfg->RampPeakVolt);
-    // APPEND_LINE("Param_VzeroStart: %f\n", pSWVCfg->VzeroStart);
-    // APPEND_LINE("Param_VzeroPeak: %f\n", pSWVCfg->VzeroPeak);
-    // APPEND_LINE("Param_Frequency: %f\n", pSWVCfg->Frequency);
-    // APPEND_LINE("Param_SqrWvAmplitude: %f\n", pSWVCfg->SqrWvAmplitude);
-    // APPEND_LINE("Param_SqrWvRampIncrement: %f\n", pSWVCfg->SqrWvRampIncrement);
-    // APPEND_LINE("Param_SampleDelay: %f\n", pSWVCfg->SampleDelay);
-    // APPEND_LINE("Param_LPTIARtiaVal: %u\n", LPTIARtiaValues[pSWVCfg->LPTIARtiaSel]);
-    // APPEND_LINE("Param_bRampOneDir: %u\n", (unsigned int)pSWVCfg->bRampOneDir);
+    // 1. Transmit Header
+    APPEND_LINE("Device Name: %s\n", device_name);
+    APPEND_LINE("Param_RampStartVolt: %f\n", pSWVCfg->RampStartVolt);
+    APPEND_LINE("Param_RampPeakVolt: %f\n", pSWVCfg->RampPeakVolt);
+    APPEND_LINE("Param_VzeroStart: %f\n", pSWVCfg->VzeroStart);
+    APPEND_LINE("Param_VzeroPeak: %f\n", pSWVCfg->VzeroPeak);
+    APPEND_LINE("Param_Frequency: %f\n", pSWVCfg->Frequency);
+    APPEND_LINE("Param_SqrWvAmplitude: %f\n", pSWVCfg->SqrWvAmplitude);
+    APPEND_LINE("Param_SqrWvRampIncrement: %f\n", pSWVCfg->SqrWvRampIncrement);
+    APPEND_LINE("Param_SampleDelay: %f\n", pSWVCfg->SampleDelay);
+    APPEND_LINE("Param_LPTIARtiaVal: %u\n", LPTIARtiaValues[pSWVCfg->LPTIARtiaSel]);
+    APPEND_LINE("Param_bRampOneDir: %u\n", (unsigned int)pSWVCfg->bRampOneDir);
     
-    // // Transmit Rtia
-    // APPEND_LINE("Rtia,%f,%f\n", pSWVCfg->RtiaValue.Magnitude, pSWVCfg->RtiaValue.Phase);
+    // Transmit Rtia
+    APPEND_LINE("Rtia,%f,%f\n", pSWVCfg->RtiaValue.Magnitude, pSWVCfg->RtiaValue.Phase);
 
-    // if (chunk_len > 0) {
-    //     ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len);
-    //     chunk_len = 0;
-    //     chunk_buffer[0] = '\0';
-    // }
+    if (chunk_len > 0) {
+        ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len);
+        chunk_len = 0;
+        chunk_buffer[0] = '\0';
+    }
 
-    // // 2. Transmit Voltage Steps
-    // APPEND_LINE("Voltage Steps:\n");
+    // 2. Transmit Voltage Steps
+    APPEND_LINE("Voltage Steps:\n");
     
-    // for (uint32_t i = 0; i < SWV_VoltageStepCount; i++) {
-    //     APPEND_LINE("Voltage Step: %f mV\n", SWV_VoltageStepBuffer[i]);
-    // }
-    // if (chunk_len > 0) {
-    //     ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len); // Flush remaining
-    //     chunk_len = 0;
-    //     chunk_buffer[0] = '\0';
-    // }
+    for (uint32_t i = 0; i < SWV_VoltageStepCount; i++) {
+        APPEND_LINE("Voltage Step: %f mV\n", SWV_VoltageStepBuffer[i]);
+    }
+    if (chunk_len > 0) {
+        ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len); // Flush remaining
+        chunk_len = 0;
+        chunk_buffer[0] = '\0';
+    }
 
-    // // 3. Transmit Data Output
-    // APPEND_LINE("Data Output:\n");
+    // 3. Transmit Data Output
+    APPEND_LINE("Data Output:\n");
     
-    // float *pData = (float*)AppBuff;
-    // for (uint32_t i = 0; i < resultCount; i++) {
-    //     APPEND_LINE("index:%lu, %.10f\n", i, pData[i]);
-    // }
-    // if (chunk_len > 0) {
-    //     ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len); // Flush remaining
-    // }
+    float *pData = (float*)AppBuff;
+    for (uint32_t i = 0; i < resultCount; i++) {
+        APPEND_LINE("index:%lu, %.10f\n", i, pData[i]);
+    }
+    if (chunk_len > 0) {
+        ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len); // Flush remaining
+    }
     
-    // // Send finish message via BLE
-    // chunk_len = snprintf(chunk_buffer, sizeof(chunk_buffer), "SqrWave Voltammetry test finished.\n");
-    // ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len);
+    // Send finish message via BLE
+    chunk_len = snprintf(chunk_buffer, sizeof(chunk_buffer), "SqrWave Voltammetry test finished.\n");
+    ble_transmit_buffer((const uint8_t *)chunk_buffer, (uint16_t)chunk_len);
 }
 
 /**
@@ -297,6 +298,6 @@ void AD5940_SWV_Main(void)
   }
   
   // TODO: Transmit all accumulated data
-  // TransmitSWVData(appBuffIndex);
+  TransmitSWVData(appBuffIndex);
 }
 
