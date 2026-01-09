@@ -1,0 +1,9 @@
+CompileFlags:
+  Add:
+    - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/lib/gcc/xtensa-esp32s3-elf/8.4.0/include"
+    - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/lib/gcc/xtensa-esp32s3-elf/8.4.0/include-fixed"
+    - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/sys-include"
+    - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/include"
+    - "--target=i686-none-elf"
+    - "-D__xtensa__"
+    - "-D__XTENSA__"

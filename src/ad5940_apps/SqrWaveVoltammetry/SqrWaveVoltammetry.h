@@ -16,7 +16,7 @@ Analog Devices Software License Agreement.
 *****************************************************************************/
 #ifndef _SWVTEST_H_
 #define _SWVTEST_H_
-#include "../../ad5940lib/ad5940.h"
+#include "../../../lib/ad5940lib/ad5940.h"
 #include "math.h"
 #include "string.h"
 #include <stdio.h>

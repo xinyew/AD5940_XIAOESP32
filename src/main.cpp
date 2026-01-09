@@ -1,6 +1,6 @@
-#include "./src/ad5940_apps/AD5940Main.h"
-#include "./src/port/BLEPort.h"
-#include "./src/ad5940lib/ad5940.h"
+#include "../lib/ad5940lib/ad5940.h"
+#include "./ad5940_apps/AD5940Main.h"
+#include "./port/BLEPort.h"
 #include <Arduino.h>
 #include <SPI.h>
 
