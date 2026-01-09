@@ -1,9 +1,16 @@
 CompileFlags:
   Add:
+    - "-isystem/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/lib/gcc/xtensa-esp32s3-elf/8.4.0/include"
+    - "-isystem/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/lib/gcc/xtensa-esp32s3-elf/8.4.0/include-fixed"
+    - "-isystem/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/sys-include"
+    - "-isystem/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/include"
+    - "-isystem/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/include/c++/8.4.0"
+    - "-isystem/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/include/c++/8.4.0/xtensa-esp32s3-elf"
     - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/lib/gcc/xtensa-esp32s3-elf/8.4.0/include"
-    - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/lib/gcc/xtensa-esp32s3-elf/8.4.0/include-fixed"
-    - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/sys-include"
-    - "-I/Users/xinye/.platformio/packages/toolchain-xtensa-esp32s3/xtensa-esp32s3-elf/include"
-    - "--target=i686-none-elf"
+    - "--target=riscv32"
     - "-D__xtensa__"
     - "-D__XTENSA__"
+  Remove:
+    - "-mlongcalls"
+    - "-fstrict-volatile-bitfields"
+    - "-fno-tree-switch-conversion"

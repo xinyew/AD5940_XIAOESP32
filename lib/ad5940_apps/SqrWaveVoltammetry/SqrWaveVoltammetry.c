@@ -597,7 +597,7 @@ static AD5940Err AppSWVSeqDACCtrlGen(void)
   
   if(AppSWVCfg.StepNumber > 4096)
   {
-    thor_printf("Error: Selected Increment, StartVolt and PeakVolt exceed accepted limits \n");
+    printf("Error: Selected Increment, StartVolt and PeakVolt exceed accepted limits \n");
     while(1){}
   }
   /* Do some math calculations */
@@ -605,7 +605,6 @@ static AD5940Err AppSWVSeqDACCtrlGen(void)
   {
     //////////////////////////////// BEGIN
     printf("Voltage Steps:\n");
-    // thor_printf("Voltage Steps:\n"); // Removed, handled in TransmitSWVData
     //////////////////////////////// END
     /* Reset bIsFirstRun at end of function. */
     int32_t DACSeqLenMax;
