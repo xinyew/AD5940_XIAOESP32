@@ -1,7 +1,7 @@
 #ifndef _AD5940_PORT_H_
 #define _AD5940_PORT_H_
 
-#include "../../lib/ad5940lib/ad5940.h"
+#include "ad5940.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -14,10 +14,10 @@ By using this software you agree to the terms of the associated
 Analog Devices Software License Agreement.
 
 *****************************************************************************/
-#include "./SqrWaveVoltammetry/SqrWaveVoltammetry.h"
+#include "SqrWaveVoltammetry/SqrWaveVoltammetry.h"
 #include "AD5940Main.h"
-#include "../port/BLEPort.h" // Added for ESP32 Port
-#include "../utilities/utilities.h"
+#include <BLEPort.h> // Added for ESP32 Port
+#include <utilities.h>
 #include <string.h>
 
 /**

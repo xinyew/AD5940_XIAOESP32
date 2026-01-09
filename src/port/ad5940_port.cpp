@@ -1,4 +1,4 @@
-#include "../../lib/ad5940lib/ad5940.h"
+#include "ad5940.h"
 #include <Arduino.h>
 #include <SPI.h>
 #include <stdio.h>

@@ -151,12 +151,12 @@ Analog Devices Software License Agreement.
 * @{
 * **/
 
-#include "../../../lib/ad5940lib/ad5940.h"
+#include "ad5940.h"
 #include <stdio.h>
 #include "string.h"
 #include "math.h"
 #include "SqrWaveVoltammetry.h"
-#include "../AD5940Main.h"
+#include "AD5940Main.h"
 
 /**
 * @brief The ramp application paramters.

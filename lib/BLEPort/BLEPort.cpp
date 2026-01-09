@@ -1,6 +1,6 @@
 #include "BLEPort.h"
-#include "../ad5940_apps/AD5940Main.h" // For AD5940_SWV_Main prototype if needed
 #include "esp_mac.h"    // Added for esp_efuse_mac_get_default
+#include <AD5940Main.h> // For AD5940_SWV_Main prototype if needed
 #include <Arduino.h>
 #include <BLE2902.h>
 #include <BLEDevice.h>
@@ -56,10 +56,11 @@ void BLEPort_Init(void) {
   // Create Device Name with MAC suffix to match "THOR-xxxx" style
   uint8_t mac[6];
   esp_efuse_mac_get_default(mac);
-  // snprintf(device_name, sizeof(device_name), "THOR-%02x%02x", mac[4], mac[5]);
+  // snprintf(device_name, sizeof(device_name), "THOR-%02x%02x", mac[4],
+  // mac[5]);
 
   BLEDevice::init(device_name);
-  
+
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
