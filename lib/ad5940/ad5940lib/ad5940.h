@@ -1,26 +1,26 @@
-/**
+/**  
  * @file       ad5940.h
- * @brief      AD5940 library. This file contains all AD5940 library functions.
+ * @brief      AD5940 library. This file contains all AD5940 library functions. 
  * @author     ADI
  * @date       March 2019
  * @par Revision History:
- *
+ * 
  * Copyright (c) 2017-2019 Analog Devices, Inc. All Rights Reserved.
- *
+ * 
  * This software is proprietary to Analog Devices, Inc. and its licensors.
  * By using this software you agree to the terms of the associated
  * Analog Devices Software License Agreement.
- **/
+**/
 #ifndef _AD5940_H_
 #define _AD5940_H_
 #include "math.h"
 #include "string.h"
 #include "stdio.h"
 /** @addtogroup AD5940_Library
- * @{
- */
+  * @{
+  */
 
-/**
+/** 
  * Select the correct chip.
  * Recommend to define this in your compiler.
  * */
@@ -33,15 +33,10 @@
 #define AD5940LIB_VER_PATCH       1    /**< Path number */
 #define AD5940LIB_VER   (AD5940LIB_VER_MAJOR<<16)|(AD5940LIB_VER_MINOR<<8)|(AD5940LIB_VER_PATCH)
 
-#define ADI_DEBUG   /**< Comment this line to remove debug info. */
+//#define ADI_DEBUG   /**< Comment this line to remove debug info. */
 
 #ifdef ADI_DEBUG
-#define ADI_Print printf /**< Select the method to print out debug message */
-#endif
-
-#define CHIPSEL_594X
-#ifdef __cplusplus
-extern "C" {
+#define ADI_Print printf   /**< Select the method to print out debug message */
 #endif
 
 #if defined(CHIPSEL_M355) && defined(CHIPSEL_594X)
@@ -52,12 +47,16 @@ extern "C" {
 #error Please select the correct chip by define CHIPSEL_M355 or CHIPSEL_594X.
 #endif
 
-/**
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** 
  * @cond
  * @defgroup AD5940RegistersBitfields
  * @brief All AD5940 registers and bitfields definition.
  * @{
- */
+*/
 //#if defined(_LANGUAGE_C) || (defined(__GNUC__) && !defined(__ASSEMBLER__))
 #include <stdint.h>
 //#endif /* _LANGUAGE_C */
